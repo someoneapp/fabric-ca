@@ -112,7 +112,7 @@ func (s *Server) Start() (err error) {
 		return errors.New("server is already started")
 	}
 	// Initialize the server
-	err = s.Init(true)
+	err = s.Init(false)
 	if err != nil {
 		return err
 	}

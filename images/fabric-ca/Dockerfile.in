@@ -11,8 +11,5 @@ RUN chmod +x /usr/local/bin/fabric-ca-client
 COPY payload/fabric-ca-server /usr/local/bin
 RUN chmod +x /usr/local/bin/fabric-ca-server
 
-# Copy the same certificates that are currently hardcoded into the peers
-ADD payload/fabric-ca.tar.bz2 $FABRIC_CA_HOME
-
 EXPOSE 7054
 CMD fabric-ca-server start -b admin:adminpw
