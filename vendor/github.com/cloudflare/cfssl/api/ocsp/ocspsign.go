@@ -15,6 +15,8 @@ import (
 	"github.com/cloudflare/cfssl/helpers"
 	"github.com/cloudflare/cfssl/log"
 	"github.com/cloudflare/cfssl/ocsp"
+	cspx509 "github.com/hyperledger/fabric/bccsp/x509"
+	
 )
 
 // A Handler accepts requests with a certficate parameter
@@ -49,6 +51,7 @@ var nameToHash = map[string]crypto.Hash{
 	"SHA256": crypto.SHA256,
 	"SHA384": crypto.SHA384,
 	"SHA512": crypto.SHA512,
+	"SM3": 	  cspx509.SM3,
 }
 
 // Handle responds to requests for a ocsp signature. It creates and signs
@@ -95,6 +98,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 	if req.IssuerHash != "" {
+
 		issuerHash, ok := nameToHash[req.IssuerHash]
 		if !ok {
 			return errors.NewBadRequestString("Unsupported hash algorithm in request")

@@ -18,7 +18,7 @@ package lib
 
 import (
 	"crypto/tls"
-	"crypto/x509"
+	//"crypto/x509"
 	"crypto/x509/pkix"
 	"errors"
 	"fmt"
@@ -43,6 +43,9 @@ import (
 	_ "github.com/go-sql-driver/mysql" // import to support MySQL
 	_ "github.com/lib/pq"              // import to support Postgres
 	_ "github.com/mattn/go-sqlite3"    // import to support SQLite3
+	csptls "github.com/hyperledger/fabric/bccsp/tls"
+	cspx509 "github.com/hyperledger/fabric/bccsp/x509"
+	libhttp "github.com/hyperledger/fabric-ca/lib/http"
 )
 
 const (
@@ -428,7 +431,7 @@ func (s *Server) registerHandler(
 func (s *Server) listenAndServe() (err error) {
 
 	var listener net.Listener
-	var clientAuth tls.ClientAuthType
+	var clientAuth csptls.ClientAuthType
 	var ok bool
 
 	c := s.Config
@@ -462,7 +465,7 @@ func (s *Server) listenAndServe() (err error) {
 			return errors.New("Invalid client auth type provided")
 		}
 
-		var certPool *x509.CertPool
+		var certPool *cspx509.CertPool
 		if authType != defaultClientAuth {
 			certPool, err = LoadPEMCertPool(c.TLS.ClientAuth.CertFiles)
 			if err != nil {
@@ -470,15 +473,15 @@ func (s *Server) listenAndServe() (err error) {
 			}
 		}
 
-		config := &tls.Config{
-			Certificates: []tls.Certificate{*cer},
+		config := &csptls.Config{
+			Certificates: []csptls.Certificate{*cer},
 			ClientAuth:   clientAuth,
 			ClientCAs:    certPool,
 			MinVersion:   tls.VersionTLS12,
 			MaxVersion:   tls.VersionTLS12,
 		}
 
-		listener, err = tls.Listen("tcp", addr, config)
+		listener, err = csptls.Listen("tcp", addr, config)
 		if err != nil {
 			return fmt.Errorf("TLS listen failed for %s: %s", addrStr, err)
 		}
@@ -520,7 +523,7 @@ func (s *Server) serve() error {
 		// in https://jira.hyperledger.org/browse/FAB-3100.
 		return nil
 	}
-	s.serveError = http.Serve(listener, s.mux)
+	s.serveError = libhttp.Serve(listener, s.mux)
 	log.Errorf("Server has stopped serving: %s", s.serveError)
 	s.closeListener()
 	if s.wait != nil {
@@ -549,7 +552,7 @@ func (s *Server) checkAndEnableProfiling() error {
 			}
 			go func() {
 				log.Debugf("Profiling enabled; waiting for profile requests on port %s", pport)
-				err := http.Serve(listener, nil)
+				err := libhttp.Serve(listener, nil)
 				log.Errorf("Stopped serving for profiling requests on port %s: %s", pport, err)
 			}()
 		}

@@ -17,18 +17,29 @@ limitations under the License.
 package tls
 
 import (
+	"crypto"
 	"crypto/rand"
-	"crypto/rsa"
+	//"crypto/rsa"
+	//"crypto/elliptic"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/pem"
+	"encoding/asn1"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
 	"os"
 	"testing"
 	"time"
+	"path/filepath"
 
 	"github.com/stretchr/testify/assert"
+	cspx509 "github.com/hyperledger/fabric/bccsp/x509"
+	"github.com/warm3snow/gmsm/sm2"
+	"github.com/hyperledger/fabric/bccsp"
+	"github.com/hyperledger/fabric/bccsp/factory"
+	"github.com/hyperledger/fabric/bccsp/signer"
 )
 
 const (
@@ -151,12 +162,9 @@ func TestCheckCertDates(t *testing.T) {
 		assert.Error(t, errors.New("Expired certificate should have resulted in an error"))
 	}
 
-	err = createTestCertificate()
-	if err != nil {
-		assert.Error(t, err)
-	}
+	TestCreateCertificate(t)
 
-	err = checkCertDates("notbefore.pem")
+	err = checkCertDates("tls-cert.pem")
 	if err == nil {
 		assert.Error(t, errors.New("Future valid certificate should have resulted in an error"))
 	}
@@ -164,41 +172,148 @@ func TestCheckCertDates(t *testing.T) {
 		assert.Contains(t, err.Error(), "Certificate provided not valid until later date")
 	}
 
-	os.Remove("notbefore.pem")
+	os.Remove("tls-cert.pem")
+}
+type sm2PrivateKey struct {
+	Version       *big.Int
+	PrivateKey    *big.Int
+	NamedCurveOID asn1.ObjectIdentifier `asn1:"optional,explicit,tag:0"`
+	PublicKey     asn1.BitString        `asn1:"optional,explicit,tag:1"`
 }
 
-func createTestCertificate() error {
+type pkcs8Info struct {
+	Version             int
+	PrivateKeyAlgorithm []asn1.ObjectIdentifier
+	PrivateKey          []byte
+}
+
+var oidPublicKeyECDSA = asn1.ObjectIdentifier{1, 2, 840, 10045, 2, 1}
+var oidNamedCurveSm2  = asn1.ObjectIdentifier{1, 2, 156, 10197, 1, 301}
+func TestCreateCertificate(t *testing.T){
 	// Dynamically create a certificate with future valid date for testing purposes
+	subject := subjectTemplate()
+	subject.Organization = []string{"Hyperledger Fabric"}
+	subject.OrganizationalUnit = []string{"WWW"}
+	subject.CommonName = "localhost"
+
+	var capriv bccsp.Key
+	var s crypto.Signer
+	keystore := "/home/yuandandan/gopath/src/github.com/hyperledger/fabric-ca"
+	opts := &factory.FactoryOpts{
+		ProviderName: "SW",
+		SwOpts: &factory.SwOpts{
+			HashFamily: "SM3",
+			SecLevel:   256,
+			FileKeystore: &factory.FileKeystoreOpts{
+				KeyStorePath: keystore,
+			},
+		},
+	}
+	csp, err := factory.GetBCCSPFromOpts(opts)
+	if err == nil {
+		// generate a key
+		capriv, err = csp.KeyGen(&bccsp.SM2KeyGenOpts{Temporary: false})
+		if err == nil {
+			// create a crypto.Signer
+			s, err = signer.New(csp, capriv)
+		}
+	}
+
 	certTemplate := &x509.Certificate{
 		IsCA: true,
 		BasicConstraintsValid: true,
-		SubjectKeyId:          []byte{1, 2, 3},
+		Subject: subject,
+		SubjectKeyId:          capriv.SKI(),
 		SerialNumber:          big.NewInt(1234),
-		NotBefore:             time.Now().Add(time.Hour * 24),
-		NotAfter:              time.Now().Add(time.Hour * 48),
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(3650 * 24 * time.Hour),
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign | x509.KeyUsageKeyEncipherment | x509.KeyUsageCRLSign,
 	}
-	// generate private key
-	privatekey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return fmt.Errorf("Error occurred during key generation: %s", err)
-	}
-	publickey := &privatekey.PublicKey
+	
+
 	// create a self-signed certificate. template = parent
 	var parent = certTemplate
-	cert, err := x509.CreateCertificate(rand.Reader, certTemplate, parent, publickey, privatekey)
+	caPub, err := GetPublicKey(capriv)
 	if err != nil {
-		return fmt.Errorf("Error occurred during certificate creation: %s", err)
+		assert.Error(t, fmt.Errorf("Error occurred during get ca pubkey: %s", err))
 	}
 
-	pemfile, _ := os.Create("notbefore.pem")
+	cacert, err := cspx509.CreateCertificate(rand.Reader, certTemplate, parent, caPub, s)
+	if err != nil {
+		assert.Error(t, fmt.Errorf("Error occurred during ca certificate creation: %s", err))
+	}
+
+	pemfile, _ := os.Create("root.pem")
 	var pemkey = &pem.Block{
 		Type:  "CERTIFICATE",
-		Bytes: cert,
+		Bytes: cacert,
 	}
 	pem.Encode(pemfile, pemkey)
 	pemfile.Close()
 
-	return nil
+	x509Cert, err := cspx509.ParseCertificate(cacert)
+
+	priv, err := csp.KeyGen(&bccsp.SM2KeyGenOpts{Temporary: false})
+	if err != nil {
+		assert.Error(t, fmt.Errorf("Error occurred during key creation: %s", err))
+	}
+	pub, err := GetPublicKey(priv)
+	if err != nil {
+		assert.Error(t, fmt.Errorf("Error occurred during get pubkey: %s", err))
+	}
+	fmt.Println(x509Cert)
+	certTemplate.SubjectKeyId = priv.SKI()
+	certTemplate.SerialNumber = big.NewInt(5678)
+	certTemplate.NotBefore = time.Now()
+	certTemplate.NotAfter = time.Now().Add(3650 * 24 * time.Hour)
+	cert, err := cspx509.CreateCertificate(rand.Reader, certTemplate, x509Cert, pub, s)
+	if err != nil {
+		assert.Error(t, fmt.Errorf("Error occurred during certificate creation: %s", err))
+	}
+	fmt.Println("2222222222222222222222222222222222222222222222")
+
+	pemfile2, _ := os.Create("tls-cert.pem")
+	var pemkey2 = &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: cert,
+	}
+	pem.Encode(pemfile2, pemkey2)
+	pemfile2.Close()
+
+	id := hex.EncodeToString(capriv.SKI())
+
+	os.Rename(filepath.Join(keystore, id+"_sk"), "root-key.pem")
+
+	id2 := hex.EncodeToString(priv.SKI())
+
+	os.Rename(filepath.Join(keystore, id2+"_sk"), "tls-key.pem")
+
+
+
+}
+//return a *sm2.PublicKey
+func GetPublicKey(priv bccsp.Key) (*sm2.PublicKey, error) {
+	pubKey, err := priv.PublicKey()
+	if err != nil {
+		return nil, err
+	}
+	pubKeyBytes, err := pubKey.Bytes()
+	if err != nil {
+		return nil, err
+	}
+
+	sm2PubKey, err := cspx509.ParsePKIXPublicKey(pubKeyBytes)
+	if err != nil {
+		return nil, err
+	}
+	return sm2PubKey.(*sm2.PublicKey), nil
+}
+
+func subjectTemplate() pkix.Name {
+	return pkix.Name{
+		Country:  []string{"CN"},
+		Locality: []string{"JiNan"},
+		Province: []string{"ShanDong Province"},
+	}
 }

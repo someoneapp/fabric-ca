@@ -8,6 +8,7 @@
 package ocsp // import "golang.org/x/crypto/ocsp"
 
 import (
+	"hash"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -24,6 +25,9 @@ import (
 	"math/big"
 	"strconv"
 	"time"
+	cspx509 "github.com/hyperledger/fabric/bccsp/x509"
+	"github.com/warm3snow/gmsm/sm3"
+
 )
 
 var idPKIXOCSPBasic = asn1.ObjectIdentifier([]int{1, 3, 6, 1, 5, 5, 7, 48, 1, 1})
@@ -159,6 +163,7 @@ var hashOIDs = map[crypto.Hash]asn1.ObjectIdentifier{
 	crypto.SHA256: asn1.ObjectIdentifier([]int{2, 16, 840, 1, 101, 3, 4, 2, 1}),
 	crypto.SHA384: asn1.ObjectIdentifier([]int{2, 16, 840, 1, 101, 3, 4, 2, 2}),
 	crypto.SHA512: asn1.ObjectIdentifier([]int{2, 16, 840, 1, 101, 3, 4, 2, 3}),
+	cspx509.SM3:   asn1.ObjectIdentifier([]int{1, 2, 156, 197, 1, 401}),
 }
 
 // TODO(rlb): This is also from crypto/x509, so same comment as AGL's below
@@ -641,17 +646,22 @@ func CreateResponse(issuer, responderCert *x509.Certificate, template Response, 
 	}
 
 	if template.IssuerHash == 0 {
-		template.IssuerHash = crypto.SHA1
+		template.IssuerHash = cspx509.SM3
 	}
 	hashOID := getOIDFromHashAlgorithm(template.IssuerHash)
 	if hashOID == nil {
 		return nil, errors.New("unsupported issuer hash algorithm")
 	}
 
-	if !template.IssuerHash.Available() {
+	if !template.IssuerHash.Available() || template.IssuerHash == cspx509.SM3{
 		return nil, fmt.Errorf("issuer hash algorithm %v not linked into binarya", template.IssuerHash)
 	}
-	h := template.IssuerHash.New()
+	var h hash.Hash
+	if template.IssuerHash == cspx509.SM3 {
+		h = sm3.New();
+	} else {
+		h = template.IssuerHash.New()
+	}
 	h.Write(publicKeyInfo.PublicKey.RightAlign())
 	issuerKeyHash := h.Sum(nil)
 

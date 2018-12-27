@@ -94,8 +94,6 @@ BCCSP:
 		{
 			ProviderName: "SW",
 		},
-		jsonBCCSP,
-		yamlBCCSP,
 	}
 
 	for index, config := range cfgVariations {

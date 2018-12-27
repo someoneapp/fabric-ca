@@ -7,12 +7,13 @@ package auth
 
 import (
 	"crypto/hmac"
-	"crypto/sha256"
+	//"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
+	"github.com/warm3snow/gmsm/sm3"
 )
 
 // An AuthenticatedRequest contains a request and authentication
@@ -72,7 +73,7 @@ func New(key string, ad []byte) (*Standard, error) {
 
 // Token generates a new authentication token from the request.
 func (p Standard) Token(req []byte) (token []byte, err error) {
-	h := hmac.New(sha256.New, p.key)
+	h := hmac.New(sm3.New, p.key)
 	h.Write(req)
 	h.Write(p.ad)
 	return h.Sum(nil), nil

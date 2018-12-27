@@ -53,10 +53,20 @@ func TestSetFactoriesInvalidArgs(t *testing.T) {
 	})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Failed initializing PKCS11.BCCSP")
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Failed initializing SansecPKCS11.BCCSP")
 }
 
 func TestGetBCCSPFromOpts(t *testing.T) {
-	opts := GetDefaultOpts()
+	opts := &FactoryOpts{
+		ProviderName: "SW",
+		SwOpts: &SwOpts{
+			HashFamily: "SM3",
+			SecLevel:   256,
+			Ephemeral:  true,
+		},
+	}
 	opts.SwOpts.FileKeystore = &FileKeystoreOpts{KeyStorePath: os.TempDir()}
 	opts.SwOpts.Ephemeral = false
 	csp, err := GetBCCSPFromOpts(opts)
@@ -78,10 +88,14 @@ func TestGetBCCSPFromOpts(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, csp)
 
+	assert.NoError(t, err)
+	assert.NotNil(t, csp)
+
 	csp, err = GetBCCSPFromOpts(&FactoryOpts{
 		ProviderName: "BadName",
 	})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Could not find BCCSP, no 'BadName' provider")
 	assert.Nil(t, csp)
+
 }

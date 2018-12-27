@@ -505,11 +505,10 @@ func SignerAlgo(priv crypto.Signer) x509.SignatureAlgorithm {
 			return x509.ECDSAWithSHA1
 		}
 	case *sm2.PublicKey:
-		fmt.Println("reeeeeeeeeeeeeeeeeeeeee")
-		return cspx509.SHA256WithSM2
+		return cspx509.SM3WithSM2
 	default:
 		fmt.Println("unknown")
-		return cspx509.SHA256WithSM2
+		return cspx509.SM3WithSM2
 	}
 }
 

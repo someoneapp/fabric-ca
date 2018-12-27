@@ -27,6 +27,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 
 	cspx509 "github.com/hyperledger/fabric/bccsp/x509"
@@ -34,7 +35,7 @@ import (
 	"github.com/warm3snow/gmsm/sm2"
 )
 
-var logger = logging.MustGetLogger("Key Encoding Utils")
+var logger = logging.MustGetLogger("bccsp_utils")
 
 // struct to hold info required for PKCS#8
 type pkcs8Info struct {
@@ -46,6 +47,13 @@ type pkcs8Info struct {
 type ecPrivateKey struct {
 	Version       int
 	PrivateKey    []byte
+	NamedCurveOID asn1.ObjectIdentifier `asn1:"optional,explicit,tag:0"`
+	PublicKey     asn1.BitString        `asn1:"optional,explicit,tag:1"`
+}
+
+type sm2PrivateKey struct {
+	Version       *big.Int
+	PrivateKey    *big.Int
 	NamedCurveOID asn1.ObjectIdentifier `asn1:"optional,explicit,tag:0"`
 	PublicKey     asn1.BitString        `asn1:"optional,explicit,tag:1"`
 }
@@ -107,12 +115,13 @@ func PrivateKeyToPEM(privateKey interface{}, pwd []byte) (pemBytes []byte, err e
 			return nil, errors.New("Invalid sm2 private key. It must be different from nil")
 		}
 		//return sm2.WritePrivateKeytoMem(k, pwd)
-		privateKeyBytes := k.D.Bytes()
+		/*privateKeyBytes := k.D.Bytes()
 		paddedPrivateKey := make([]byte, (k.Curve.Params().N.BitLen()+7)/8)
-		copy(paddedPrivateKey[len(paddedPrivateKey)-len(privateKeyBytes):], privateKeyBytes)
-		asn1Bytes, err := asn1.Marshal(ecPrivateKey{
-			Version:    1,
-			PrivateKey: paddedPrivateKey,
+		copy(paddedPrivateKey[len(paddedPrivateKey)-len(privateKeyBytes):], privateKeyBytes)*/
+		ver := new(big.Int).SetInt64(1)
+		asn1Bytes, err := asn1.Marshal(sm2PrivateKey{
+			Version:    ver,
+			PrivateKey: k.D,
 			PublicKey:  asn1.BitString{Bytes: elliptic.Marshal(k.Curve, k.X, k.Y)},
 		})
 		if err != nil {
@@ -469,7 +478,8 @@ func PublicKeyToDER(publicKey interface{}) (der []byte, err error) {
 		if k == nil {
 			return nil, errors.New("Invalid sm2 public key. It must be different from nil.")
 		}
-		return sm2.MarshalSm2PublicKey(k)
+		//return sm2.MarshalSm2PublicKey(k)
+		return cspx509.MarshalPKIXPublicKey(k)
 
 	case *ecdsa.PublicKey:
 		if k == nil {
@@ -604,17 +614,19 @@ func DERToPublicKey(raw []byte) (pub interface{}, err error) {
 	}
 
 	key, err := cspx509.ParsePKIXPublicKey(raw)
-	if err == nil {
-		logger.Info("parse der to ecdsa.PublicKey")
-		return key, nil
+	if err != nil {
+		return nil, err
 	}
 
-	key, err = sm2.ParseSm2PublicKey(raw)
-	//key, err = sm2.ParsePKIXPublicKey(raw)
-	if err == nil {
-		logger.Info("parse der to sm2.PublicKey")
-		return key, nil
-	}
+	//logger.Info("cspX509 parse der to PublicKey[ECDSA/RSA/SM2]")
+	return key, nil
+	/*
+		key, err = sm2.ParseSm2PublicKey(raw)
+		//key, err = sm2.ParsePKIXPublicKey(raw)
+		if err == nil {
+			logger.Info("parse der to sm2.PublicKey")
+			return key, nil
+		}
+	*/
 
-	return nil, err
 }

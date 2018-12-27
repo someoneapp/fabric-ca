@@ -1,4 +1,5 @@
 /*
+Copyright Beijing Sansec Technology Development Co., Ltd. 2017 All Rights Reserved.
 Copyright IBM Corp. 2017 All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,7 +26,7 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/miekg/pkcs11"
+	"github.com/warm3snow/pkcs11"
 	"github.com/op/go-logging"
 )
 

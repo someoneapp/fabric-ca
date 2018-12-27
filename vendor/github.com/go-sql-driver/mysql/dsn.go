@@ -10,7 +10,7 @@ package mysql
 
 import (
 	"bytes"
-	"crypto/tls"
+	//"crypto/tls"
 	"errors"
 	"fmt"
 	"net"
@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	csptls "github.com/hyperledger/fabric/bccsp/tls"
 )
 
 var (
@@ -39,7 +40,7 @@ type Config struct {
 	Loc              *time.Location    // Location for time.Time values
 	MaxAllowedPacket int               // Max packet size allowed
 	TLSConfig        string            // TLS configuration name
-	tls              *tls.Config       // TLS configuration
+	tls              *csptls.Config       // TLS configuration
 	Timeout          time.Duration     // Dial timeout
 	ReadTimeout      time.Duration     // I/O read timeout
 	WriteTimeout     time.Duration     // I/O write timeout
@@ -475,13 +476,13 @@ func parseDSNParams(cfg *Config, params string) (err error) {
 			if isBool {
 				if boolValue {
 					cfg.TLSConfig = "true"
-					cfg.tls = &tls.Config{}
+					cfg.tls = &csptls.Config{}
 				} else {
 					cfg.TLSConfig = "false"
 				}
 			} else if vl := strings.ToLower(value); vl == "skip-verify" {
 				cfg.TLSConfig = vl
-				cfg.tls = &tls.Config{InsecureSkipVerify: true}
+				cfg.tls = &csptls.Config{InsecureSkipVerify: true}
 			} else {
 				name, err := url.QueryUnescape(value)
 				if err != nil {

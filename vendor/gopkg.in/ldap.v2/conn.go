@@ -12,6 +12,7 @@ import (
 	"net"
 	"sync"
 	"time"
+	csptls "github.com/hyperledger/fabric/bccsp/tls"
 
 	"gopkg.in/asn1-ber.v1"
 )
@@ -121,12 +122,12 @@ func Dial(network, addr string) (*Conn, error) {
 
 // DialTLS connects to the given address on the given network using tls.Dial
 // and then returns a new Conn for the connection.
-func DialTLS(network, addr string, config *tls.Config) (*Conn, error) {
+func DialTLS(network, addr string, config *csptls.Config) (*Conn, error) {
 	dc, err := net.DialTimeout(network, addr, DefaultTimeout)
 	if err != nil {
 		return nil, NewError(ErrorNetwork, err)
 	}
-	c := tls.Client(dc, config)
+	c := csptls.Client(dc, config)
 	err = c.Handshake()
 	if err != nil {
 		// Handshake error, close the established connection before we return an error

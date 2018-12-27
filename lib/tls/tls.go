@@ -17,8 +17,8 @@ limitations under the License.
 package tls
 
 import (
-	"crypto/tls"
-	"crypto/x509"
+	//"crypto/tls"
+	//"crypto/x509"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -28,6 +28,8 @@ import (
 	"github.com/hyperledger/fabric-ca/util"
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/hyperledger/fabric/bccsp/factory"
+	cspx509 "github.com/hyperledger/fabric/bccsp/x509"
+	csptls "github.com/hyperledger/fabric/bccsp/tls"
 )
 
 // ServerTLSConfig defines key material for a TLS server
@@ -58,8 +60,8 @@ type KeyCertFiles struct {
 }
 
 // GetClientTLSConfig creates a tls.Config object from certs and roots
-func GetClientTLSConfig(cfg *ClientTLSConfig, csp bccsp.BCCSP) (*tls.Config, error) {
-	var certs []tls.Certificate
+func GetClientTLSConfig(cfg *ClientTLSConfig, csp bccsp.BCCSP) (*csptls.Config, error) {
+	var certs []csptls.Certificate
 
 	if csp == nil {
 		csp = factory.GetDefault()
@@ -84,7 +86,7 @@ func GetClientTLSConfig(cfg *ClientTLSConfig, csp bccsp.BCCSP) (*tls.Config, err
 	} else {
 		log.Debug("Client TLS certificate and/or key file not provided")
 	}
-	rootCAPool := x509.NewCertPool()
+	rootCAPool := cspx509.NewCertPool()
 	if len(cfg.CertFiles) == 0 {
 		return nil, errors.New("No TLS certificate files were provided")
 	}
@@ -100,7 +102,7 @@ func GetClientTLSConfig(cfg *ClientTLSConfig, csp bccsp.BCCSP) (*tls.Config, err
 		}
 	}
 
-	config := &tls.Config{
+	config := &csptls.Config{
 		Certificates: certs,
 		RootCAs:      rootCAPool,
 	}

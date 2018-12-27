@@ -81,7 +81,7 @@ const (
 # Client Configuration
 #############################################################################
 
-# URL of the Fabric-ca-server (default: http://localhost:7054)
+# URL of the Fabric-ca-server (default: https://localhost:7054)
 url: <<<URL>>>
 
 # Membership Service Provider (MSP) directory
@@ -101,7 +101,7 @@ mspdir:
 #############################################################################
 tls:
   # TLS section for secure socket connection
-  certfiles:
+  certfiles: root.pem
   client:
     certfile:
     keyfile:
@@ -192,7 +192,7 @@ caname:
 bccsp:
     default: SW
     sw:
-        hash: SHA2
+        hash: SM3
         security: 256
         filekeystore:
             # The directory used for the software file-based keystore

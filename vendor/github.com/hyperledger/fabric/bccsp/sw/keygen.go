@@ -38,7 +38,6 @@ func (kg *sm2KeyGenerator) KeyGen(opts bccsp.KeyGenOpts) (k bccsp.Key, err error
 	if err != nil {
 		return nil, fmt.Errorf("Failed generating sm2 key for [%v]: [%s]", kg.curve, err)
 	}
-
 	return &sm2PrivateKey{privKey}, nil
 }
 

@@ -10,17 +10,18 @@ package mysql
 
 import (
 	"crypto/sha1"
-	"crypto/tls"
+	//"crypto/tls"
 	"database/sql/driver"
 	"encoding/binary"
 	"fmt"
 	"io"
 	"strings"
 	"time"
+	csptls "github.com/hyperledger/fabric/bccsp/tls"
 )
 
 var (
-	tlsConfigRegister map[string]*tls.Config // Register for custom tls.Configs
+	tlsConfigRegister map[string]*csptls.Config // Register for custom tls.Configs
 )
 
 // RegisterTLSConfig registers a custom tls.Config to be used with sql.Open.
@@ -46,13 +47,13 @@ var (
 //  })
 //  db, err := sql.Open("mysql", "user@tcp(localhost:3306)/test?tls=custom")
 //
-func RegisterTLSConfig(key string, config *tls.Config) error {
+func RegisterTLSConfig(key string, config *csptls.Config) error {
 	if _, isBool := readBool(key); isBool || strings.ToLower(key) == "skip-verify" {
 		return fmt.Errorf("key '%s' is reserved", key)
 	}
 
 	if tlsConfigRegister == nil {
-		tlsConfigRegister = make(map[string]*tls.Config)
+		tlsConfigRegister = make(map[string]*csptls.Config)
 	}
 
 	tlsConfigRegister[key] = config

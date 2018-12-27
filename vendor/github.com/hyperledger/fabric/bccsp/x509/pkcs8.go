@@ -61,6 +61,7 @@ func ParsePKCS8PrivateKey(der []byte) (key interface{}, err error) {
 }
 
 const ecPrivKeyVersion = 1
+const sm2PrivKeyVersion = 1
 
 // ecPrivateKey reflects an ASN.1 Elliptic Curve Private Key Structure.
 // References:
@@ -71,6 +72,13 @@ const ecPrivKeyVersion = 1
 type ecPrivateKey struct {
 	Version       int
 	PrivateKey    []byte
+	NamedCurveOID asn1.ObjectIdentifier `asn1:"optional,explicit,tag:0"`
+	PublicKey     asn1.BitString        `asn1:"optional,explicit,tag:1"`
+}
+
+type sm2PrivateKey struct {
+	Version       *big.Int
+	PrivateKey    *big.Int
 	NamedCurveOID asn1.ObjectIdentifier `asn1:"optional,explicit,tag:0"`
 	PublicKey     asn1.BitString        `asn1:"optional,explicit,tag:1"`
 }
@@ -128,18 +136,19 @@ func parseECPrivateKey(namedCurveOID *asn1.ObjectIdentifier, der []byte) (key *e
 }
 
 func ParseSM2PrivateKey(der []byte) (*sm2.PrivateKey, error) {
-	return parseSM2PrivateKey(nil, der)
+	return parseSM2PrivateKey(&oidNamedCurveSm2, der)
 }
 
 func parseSM2PrivateKey(namedCurveOID *asn1.ObjectIdentifier, der []byte) (key *sm2.PrivateKey, err error) {
-	var privKey ecPrivateKey
+	var privKey sm2PrivateKey
 	if _, err := asn1.Unmarshal(der, &privKey); err != nil {
 		return nil, errors.New("x509: failed to parse sm2 private key: " + err.Error())
 	}
-	if privKey.Version != ecPrivKeyVersion {
+	fmt.Println(privKey)
+	fmt.Println(privKey.Version)
+	if privKey.Version.Int64() != sm2PrivKeyVersion {
 		return nil, fmt.Errorf("x509: unknown sm2 private key version %d", privKey.Version)
 	}
-
 	var curve elliptic.Curve
 	if namedCurveOID != nil {
 		curve = namedCurveFromOID(*namedCurveOID)
@@ -150,7 +159,7 @@ func parseSM2PrivateKey(namedCurveOID *asn1.ObjectIdentifier, der []byte) (key *
 		return nil, errors.New("x509: unknown elliptic curve")
 	}
 
-	k := new(big.Int).SetBytes(privKey.PrivateKey)
+	k := new(big.Int).Set(privKey.PrivateKey)
 	curveOrder := curve.Params().N
 	if k.Cmp(curveOrder) >= 0 {
 		return nil, errors.New("x509: invalid elliptic curve private key value")
@@ -158,23 +167,7 @@ func parseSM2PrivateKey(namedCurveOID *asn1.ObjectIdentifier, der []byte) (key *
 	priv := new(sm2.PrivateKey)
 	priv.Curve = curve
 	priv.D = k
-
-	privateKey := make([]byte, (curveOrder.BitLen()+7)/8)
-
-	// Some private keys have leading zero padding. This is invalid
-	// according to [SEC1], but this code will ignore it.
-	for len(privKey.PrivateKey) > len(privateKey) {
-		if privKey.PrivateKey[0] != 0 {
-			return nil, errors.New("x509: invalid private key length")
-		}
-		privKey.PrivateKey = privKey.PrivateKey[1:]
-	}
-
-	// Some private keys remove all leading zeros, this is also invalid
-	// according to [SEC1] but since OpenSSL used to do this, we ignore
-	// this too.
-	copy(privateKey[len(privateKey)-len(privKey.PrivateKey):], privKey.PrivateKey)
-	priv.X, priv.Y = curve.ScalarBaseMult(privateKey)
-
+	priv.X, priv.Y = curve.ScalarBaseMult(privKey.PrivateKey.Bytes())
+	fmt.Println(priv)
 	return priv, nil
 }

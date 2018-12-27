@@ -99,10 +99,10 @@ crlsizelimit: 512000
 #############################################################################
 tls:
   # Enable TLS (default: false)
-  enabled: false
+  enabled: true
   # TLS for the server's listening port
-  certfile: ca-cert.pem
-  keyfile: ca-key.pem
+  certfile: tls-cert.pem
+  keyfile: tls-key.pem
   clientauth:
     type: noclientcert
     certfiles:
@@ -280,7 +280,7 @@ csr:
 bccsp:
     default: SW
     sw:
-        hash: SHA2
+        hash: SM3
         security: 256
         filekeystore:
             # The directory used for the software file-based keystore

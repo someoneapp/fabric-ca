@@ -234,7 +234,7 @@ func GenECDSAToken(csp bccsp.BCCSP, cert []byte, key bccsp.Key, body []byte) (st
 	b64cert := B64Encode(cert)
 	bodyAndcert := b64body + "." + b64cert
 
-	digest, digestError := csp.Hash([]byte(bodyAndcert), &bccsp.SHAOpts{})
+	digest, digestError := csp.Hash([]byte(bodyAndcert), &bccsp.SM3Opts{})
 	if digestError != nil {
 		return "", fmt.Errorf("Hash operation on %s\t failed with error : %s", bodyAndcert, digestError)
 	}
@@ -259,7 +259,7 @@ func GenSM2Token(csp bccsp.BCCSP, cert []byte, key bccsp.Key, body []byte) (stri
 	b64cert := B64Encode(cert)
 	bodyAndcert := b64body + "." + b64cert
 
-	digest, digestError := csp.Hash([]byte(bodyAndcert), &bccsp.SHAOpts{})
+	digest, digestError := csp.Hash([]byte(bodyAndcert), &bccsp.SM3Opts{})
 	if digestError != nil {
 		return "", fmt.Errorf("Hash operation on %s\t failed with error : %s", bodyAndcert, digestError)
 	}

@@ -25,9 +25,9 @@ import (
 )
 
 type FactoryOpts struct {
-	ProviderName string             `mapstructure:"default" json:"default" yaml:"Default"`
-	SwOpts       *SwOpts            `mapstructure:"SW,omitempty" json:"SW,omitempty" yaml:"SwOpts"`
-	Pkcs11Opts   *pkcs11.PKCS11Opts `mapstructure:"PKCS11,omitempty" json:"PKCS11,omitempty" yaml:"PKCS11"`
+	ProviderName  string                `mapstructure:"default" json:"default" yaml:"Default"`
+	SwOpts        *SwOpts               `mapstructure:"SW,omitempty" json:"SW,omitempty" yaml:"SwOpts"`
+	Pkcs11Opts    *pkcs11.PKCS11Opts    `mapstructure:"PKCS11,omitempty" json:"PKCS11,omitempty" yaml:"PKCS11"`
 }
 
 // InitFactories must be called before using factory interfaces
@@ -53,7 +53,11 @@ func setFactories(config *FactoryOpts) error {
 	}
 
 	if config.SwOpts == nil {
-		config.SwOpts = GetDefaultOpts().SwOpts
+		config.SwOpts = &SwOpts{
+			HashFamily: "SM3",
+			SecLevel:   256,
+			Ephemeral:  true,
+		}
 	}
 
 	// Initialize factories map
@@ -73,7 +77,7 @@ func setFactories(config *FactoryOpts) error {
 		f := &PKCS11Factory{}
 		err := initBCCSP(f, config)
 		if err != nil {
-			factoriesInitError = fmt.Errorf("Failed initializing PKCS11.BCCSP %s\n[%s]", factoriesInitError, err)
+			factoriesInitError = fmt.Errorf("Failed initializing PKCS11.BCCSP %s\n[%s]", factoriesInitError.Error(), err.Error())
 		}
 	}
 

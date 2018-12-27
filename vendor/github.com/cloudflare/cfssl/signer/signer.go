@@ -152,10 +152,10 @@ func DefaultSigAlgo(priv crypto.Signer) x509.SignatureAlgorithm {
 			return x509.ECDSAWithSHA1
 		}
 	case *sm2.PublicKey:
-		return cspx509.SHA256WithSM2
+		return cspx509.SM3WithSM2
 	default:
 		//return x509.UnknownSignatureAlgorithm
-		return cspx509.SHA256WithSM2
+		return cspx509.SM3WithSM2
 	}
 }
 

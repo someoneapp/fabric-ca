@@ -31,6 +31,7 @@ import (
 	"strings"
 
 	cfsslapi "github.com/cloudflare/cfssl/api"
+	libhttp "github.com/hyperledger/fabric-ca/lib/http"
 	"github.com/cloudflare/cfssl/csr"
 	"github.com/cloudflare/cfssl/log"
 	"github.com/hyperledger/fabric-ca/api"
@@ -389,7 +390,7 @@ func (c *Client) SendReq(req *http.Request, result interface{}) (err error) {
 		return err
 	}
 
-	var tr = new(http.Transport)
+	var tr = new(libhttp.Transport)
 
 	if c.Config.TLS.Enabled {
 		log.Info("TLS Enabled")

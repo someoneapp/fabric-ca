@@ -17,7 +17,7 @@ limitations under the License.
 package lib
 
 import (
-	"crypto/tls"
+       //"crypto/tls"
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
@@ -29,15 +29,16 @@ import (
 	"github.com/hyperledger/fabric-ca/api"
 	"github.com/hyperledger/fabric-ca/util"
 	cspx509 "github.com/hyperledger/fabric/bccsp/x509"
+	csptls "github.com/hyperledger/fabric/bccsp/tls"
 	"github.com/spf13/viper"
 )
 
-var clientAuthTypes = map[string]tls.ClientAuthType{
-	"noclientcert":               tls.NoClientCert,
-	"requestclientcert":          tls.RequestClientCert,
-	"requireanyclientcert":       tls.RequireAnyClientCert,
-	"verifyclientcertifgiven":    tls.VerifyClientCertIfGiven,
-	"requireandverifyclientcert": tls.RequireAndVerifyClientCert,
+var clientAuthTypes = map[string]csptls.ClientAuthType{
+	"noclientcert":               csptls.NoClientCert,
+	"requestclientcert":          csptls.RequestClientCert,
+	"requireanyclientcert":       csptls.RequireAnyClientCert,
+	"verifyclientcertifgiven":    csptls.VerifyClientCertIfGiven,
+	"requireandverifyclientcert": csptls.RequireAndVerifyClientCert,
 }
 
 // GetCertID returns both the serial number and AKI (Authority Key ID) for the certificate
@@ -65,8 +66,8 @@ func BytesToX509Cert(bytes []byte) (*x509.Certificate, error) {
 }
 
 // LoadPEMCertPool loads a pool of PEM certificates from list of files
-func LoadPEMCertPool(certFiles []string) (*x509.CertPool, error) {
-	certPool := x509.NewCertPool()
+func LoadPEMCertPool(certFiles []string) (*cspx509.CertPool, error) {
+	certPool := cspx509.NewCertPool()
 
 	if len(certFiles) > 0 {
 		for _, cert := range certFiles {

@@ -23,6 +23,7 @@ import (
 	"hash"
 
 	"golang.org/x/crypto/sha3"
+        "github.com/warm3snow/gmsm/sm3"
 )
 
 type config struct {
@@ -38,6 +39,8 @@ func (conf *config) setSecurityLevel(securityLevel int, hashFamily string) (err 
 		err = conf.setSecurityLevelSHA2(securityLevel)
 	case "SHA3":
 		err = conf.setSecurityLevelSHA3(securityLevel)
+        case "SM3":
+                err = conf.setSecurityLevelSM3()
 	default:
 		err = fmt.Errorf("Hash Family not supported [%s]", hashFamily)
 	}
@@ -79,3 +82,12 @@ func (conf *config) setSecurityLevelSHA3(level int) (err error) {
 	}
 	return
 }
+
+func (conf *config) setSecurityLevelSM3() (err error) {
+        conf.ellipticCurve = elliptic.P256()
+        conf.hashFunction = sm3.New
+        conf.rsaBitLength = 2048
+        conf.aesBitLength = 32
+        return
+}
+

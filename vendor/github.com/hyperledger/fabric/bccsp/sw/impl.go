@@ -20,6 +20,7 @@ import (
 	"crypto/elliptic"
 	"crypto/sha256"
 	"crypto/sha512"
+	"encoding/hex"
 	"hash"
 	"reflect"
 
@@ -28,6 +29,7 @@ import (
 	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/warm3snow/gmsm/sm2"
 	"golang.org/x/crypto/sha3"
+        "github.com/warm3snow/gmsm/sm3"
 )
 
 var (
@@ -42,13 +44,13 @@ func NewDefaultSecurityLevel(keyStorePath string) (bccsp.BCCSP, error) {
 		return nil, errors.ErrorWithCallstack(errors.BCCSP, errors.Internal, "Failed initializing key store at [%v]", keyStorePath).WrapError(err)
 	}
 
-	return New(256, "SHA2", ks)
+	return New(256, "SM3", ks)
 }
 
 // NewDefaultSecurityLevel returns a new instance of the software-based BCCSP
 // at security level 256, hash family SHA2 and using the passed KeyStore.
 func NewDefaultSecurityLevelWithKeystore(keyStore bccsp.KeyStore) (bccsp.BCCSP, error) {
-	return New(256, "SHA2", keyStore)
+	return New(256, "SM3", keyStore)
 }
 
 // New returns a new instance of the software-based BCCSP
@@ -96,6 +98,8 @@ func New(securityLevel int, hashFamily string, keyStore bccsp.KeyStore) (bccsp.B
 	hashers[reflect.TypeOf(&bccsp.SHA384Opts{})] = &hasher{hash: sha512.New384}
 	hashers[reflect.TypeOf(&bccsp.SHA3_256Opts{})] = &hasher{hash: sha3.New256}
 	hashers[reflect.TypeOf(&bccsp.SHA3_384Opts{})] = &hasher{hash: sha3.New384}
+        hashers[reflect.TypeOf(&bccsp.SM3Opts{})] = &hasher{hash: sm3.New}
+        
 
 	impl := &impl{
 		conf:       conf,
@@ -190,6 +194,8 @@ func (csp *impl) KeyGen(opts bccsp.KeyGenOpts) (k bccsp.Key, err error) {
 			return nil, errors.ErrorWithCallstack(errors.BCCSP, errors.Internal, "Failed storing key [%s]. [%s]", opts.Algorithm(), err)
 		}
 	}
+
+	logger.Infof("SKI[%s], Ephemeral[%t]", hex.EncodeToString(k.SKI()), opts.Ephemeral())
 
 	return k, nil
 }

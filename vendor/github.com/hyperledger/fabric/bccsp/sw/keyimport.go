@@ -215,7 +215,7 @@ func (ki *x509PublicKeyImportOptsKeyImporter) KeyImport(raw interface{}, opts bc
 		if x509Cert.SignatureAlgorithm == sm2.SM2WithSHA256 {
 			switch pk.(type) {
 			case *ecdsa.PublicKey:
-				logger.Info("...sm2 key import...")
+				logger.Info("1...sm2 key import...")
 				tmpK, _ := sm2.GenerateKey()
 				sm2pk := &tmpK.PublicKey
 				sm2pk.X, sm2pk.Y = pk.(*ecdsa.PublicKey).X, pk.(*ecdsa.PublicKey).Y
@@ -239,7 +239,7 @@ func (ki *x509PublicKeyImportOptsKeyImporter) KeyImport(raw interface{}, opts bc
 					pk,
 					&bccsp.RSAGoPublicKeyImportOpts{Temporary: opts.Ephemeral()})
 			case *sm2.PublicKey:
-				logger.Info("...sm2 key import...")
+				logger.Info("2...sm2 key import...")
 				return ki.bccsp.keyImporters[reflect.TypeOf(&bccsp.SM2GoPublicKeyImportOpts{})].KeyImport(
 					pk.(*sm2.PublicKey),
 					&bccsp.SM2GoPublicKeyImportOpts{Temporary: opts.Ephemeral()})
@@ -255,7 +255,7 @@ func (ki *x509PublicKeyImportOptsKeyImporter) KeyImport(raw interface{}, opts bc
 			pk := cert.PublicKey
 			switch pk.(type) {
 			case *sm2.PublicKey:
-				logger.Info("...sm2 key import...")
+				logger.Info("3...sm2 key import...")
 				return ki.bccsp.keyImporters[reflect.TypeOf(&bccsp.ECDSAGoPublicKeyImportOpts{})].KeyImport(
 					pk,
 					&bccsp.ECDSAGoPublicKeyImportOpts{Temporary: opts.Ephemeral()})

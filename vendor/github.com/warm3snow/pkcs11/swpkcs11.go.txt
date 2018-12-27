@@ -1,0 +1,67 @@
+/* swpkcs11.go include file for PKCS #11. */
+/* $Revision: 1.0 $ */
+
+/* This header file contains pretty much everything about all the */
+/* Cryptoki function prototypes.  Because this information is */
+/* used for more than just declaring function prototypes, the */
+/* order of the functions appearing herein is important, and */
+/* should not be altered. */
+
+const (
+	CKM_VENDOR_DEFINED = 0x80000000
+)
+
+const (
+	CKK_SM2 = (CKK_VENDOR_DEFINED + 4)
+	CKK_SM3 = (CKK_VENDOR_DEFINED + 5)
+
+	CKM_SM2                = (CKM_VENDOR_DEFINED + 0x8000)
+	CKM_SM2_KEY_PAIR_GEN   = (CKM_SM2 + 0x00000001)
+	CKM_SM3_SM2            = (CKM_SM2 + 0x00000100)
+	CKM_SM3_SM2_DER        = (CKM_SM2 + 0x00000101)
+	CKM_SM3_SM2_APPID1     = (CKM_SM2 + 0x00000102)
+	CKM_SM3_SM2_APPID1_DER = (CKM_SM2 + 0x00000103)
+	CKM_SM3_SM2_Z          = CKM_SM3_SM2_APPID1
+	CKM_SM3_SM2_Z_DER      = CKM_SM3_SM2_APPID1_DER
+	CKM_SM2_SIGN           = (CKM_SM2 + 0x00000104)
+	CKM_SM2_SIGN_NO_DER    = (CKM_SM2 + 0x00000105)
+
+	CKM_SM2_RAW         = (CKM_SM2 + 0x00000200)
+	CKM_SM2_CIPHER_DER  = (CKM_SM2 + 0x00000201)
+	CKM_SM2_RAW_DER     = CKM_SM2_CIPHER_DER
+	CKM_SHA_160_SM2     = (CKM_SM2 + 0x00000300)
+	CKM_SM2_SHA_160     = CKM_SHA_160_SM2
+	CKM_SHA_160_SM2_DER = (CKM_SM2 + 0x00000301)
+	CKM_SM2_SHA1        = CKM_SHA_160_SM2
+	CKM_SM2_SHA1_DER    = CKM_SHA_160_SM2_DER
+	CKM_SHA_256_SM2     = (CKM_SM2 + 0x00000400)
+	CKM_SM2_SHA_256     = CKM_SHA_256_SM2
+	CKM_SHA_256_SM2_DER = (CKM_SM2 + 0x00000401)
+
+	CKM_SM3          = (CKM_VENDOR_DEFINED + 0x9000)
+	CKM_SM3_HASH     = (CKM_SM3 + 0x00000001)
+	CKM_SM3_HASH_JIT = (CKK_VENDOR_DEFINED + 5)
+
+	//for IBM
+	CKK_IBM_SM4                  = 0x80050001
+	CKK_IBM_SM2                  = 0x80050002
+	CKM_IBM_SM2_KEY_PAIR_GEN     = 0x8005000A
+	CKM_IBM_SM2                  = 0x8005000B
+	CKM_IBM_SM2_SM3              = 0x8005000C
+	CKM_IBM_SM2_ENCRYPT          = 0x8005000D
+	CKM_IBM_SM3                  = 0x8005000E
+	CKM_IBM_SM4_KEY_GEN          = 0x80050001
+	CKM_IBM_SM4_ECB              = 0x80050004
+	CKM_IBM_SM4_CBC              = 0x80050002
+	CKM_IBM_SM4_MAC_GENERAL      = 0x80050007
+	CKM_IBM_SM4_MAC              = 0x80058007
+	CKM_IBM_ISO2_SM4_MAC_GENERAL = 0x80050008
+	CKM_IBM_ISO2_SM4_MAC         = 0x80058008
+	CKM_IBM_SM4_ECB_ENCRYPT_DATA = 0x80050009
+	CKM_IBM_TRANSPORTKEY         = 0x80020005
+
+//#define CKM_XOR_BASE_AND_DATA						0x00000364
+
+)
+
+

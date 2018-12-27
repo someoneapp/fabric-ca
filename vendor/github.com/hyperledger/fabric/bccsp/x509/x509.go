@@ -15,6 +15,7 @@ import (
 	"encoding/asn1"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"math/big"
 	"net"
@@ -22,6 +23,7 @@ import (
 	"time"
 
 	"github.com/warm3snow/gmsm/sm2"
+	"github.com/warm3snow/gmsm/sm3"
 )
 
 //"fmt"
@@ -106,8 +108,12 @@ type validity struct {
 }
 
 const (
+	SM3 crypto.Hash = 17 + iota
+)
+const (
 	UnknownSignatureAlgorithm x509.SignatureAlgorithm = iota + 20
 	SHA256WithSM2
+	SM3WithSM2
 )
 
 const (
@@ -146,6 +152,7 @@ var (
 	oidISOSignatureSHA1WithRSA = asn1.ObjectIdentifier{1, 3, 14, 3, 2, 29}
 
 	oidSignatureSHA256WithSM2 = asn1.ObjectIdentifier{1, 2, 156, 10197, 1, 503}
+	oidSignatureSM3WithSM2    = asn1.ObjectIdentifier{1, 2, 156, 10197, 1, 501}
 )
 
 var (
@@ -186,6 +193,7 @@ var signatureAlgorithmDetails = []struct {
 	{x509.ECDSAWithSHA384, oidSignatureECDSAWithSHA384, x509.ECDSA, crypto.SHA384},
 	{x509.ECDSAWithSHA512, oidSignatureECDSAWithSHA512, x509.ECDSA, crypto.SHA512},
 	{SHA256WithSM2, oidSignatureSHA256WithSM2, x509.ECDSA, crypto.SHA256},
+	{SM3WithSM2, oidSignatureSM3WithSM2, x509.ECDSA, SM3},
 }
 
 type dsaAlgorithmParameters struct {
@@ -348,10 +356,17 @@ func CreateCertificateRequest(rand io.Reader, template *x509.CertificateRequest,
 		return
 	}
 	tbsCSR.Raw = tbsCSRContents
-
-	h := hashFunc.New()
-	h.Write(tbsCSRContents)
-	digest := h.Sum(nil)
+	var h hash.Hash
+	var digest []byte
+	if hashFunc == SM3 {
+		h = sm3.New()
+		h.Write(tbsCSRContents)
+		digest = h.Sum(nil)
+	} else {
+		h = hashFunc.New()
+		h.Write(tbsCSRContents)
+		digest = h.Sum(nil)
+	}
 
 	var signature []byte
 	signature, err = key.Sign(rand, digest, hashFunc)
@@ -400,8 +415,8 @@ func signingParamsForPublicKey(pub interface{}, requestedSigAlgo x509.SignatureA
 		}
 	case *sm2.PublicKey:
 		pubType = x509.ECDSA
-		hashFunc = crypto.SHA256
-		sigAlgo.Algorithm = oidSignatureSHA256WithSM2
+		hashFunc = SM3
+		sigAlgo.Algorithm = oidSignatureSM3WithSM2
 
 	default:
 		err = errors.New("x509: unknown PublickeyAlgorithm")
@@ -645,6 +660,7 @@ func parseCertificateRequest(in *certificateRequest) (*x509.CertificateRequest, 
 		Version:    in.TBSCSR.Version,
 		Attributes: parseRawAttributes(in.TBSCSR.RawAttributes),
 	}
+
 	var err error
 	out.PublicKey, err = parsePublicKey(out.PublicKeyAlgorithm, &in.TBSCSR.PublicKey)
 	if err != nil {
@@ -801,6 +817,7 @@ func parsePublicKey(algo x509.PublicKeyAlgorithm, keyData *publicKeyInfo) (inter
 				X:     x,
 				Y:     y,
 			}
+			fmt.Println("parse to sm2.PublicKey")
 			return pub, nil
 		} else {
 			pub := &ecdsa.PublicKey{
@@ -808,6 +825,7 @@ func parsePublicKey(algo x509.PublicKeyAlgorithm, keyData *publicKeyInfo) (inter
 				X:     x,
 				Y:     y,
 			}
+			fmt.Println("parse to ecdsa.PublicKey")
 			return pub, nil
 		}
 
@@ -1256,9 +1274,17 @@ func CreateCertificate(rand io.Reader, template, parent *x509.Certificate, pub, 
 
 	c.Raw = tbsCertContents
 
-	h := hashFunc.New()
-	h.Write(tbsCertContents)
-	digest := h.Sum(nil)
+	var h hash.Hash
+	var digest []byte
+	if hashFunc == SM3 {
+		h = sm3.New()
+		h.Write(tbsCertContents)
+		digest = h.Sum(nil)
+	} else {
+		h = hashFunc.New()
+		h.Write(tbsCertContents)
+		digest = h.Sum(nil)
+	}
 
 	var signerOpts crypto.SignerOpts
 	signerOpts = hashFunc
@@ -1674,17 +1700,26 @@ func checkSignature(algo x509.SignatureAlgorithm, signed, signature []byte, publ
 		hashType = crypto.SHA512
 	case x509.MD2WithRSA, x509.MD5WithRSA:
 		return x509.InsecureAlgorithmError(algo)
+	case SM3WithSM2:
+		hashType = SM3
 	default:
 		return x509.ErrUnsupportedAlgorithm
 	}
 
-	if !hashType.Available() {
+	if hashType != SM3 && !hashType.Available() {
 		return x509.ErrUnsupportedAlgorithm
 	}
-	h := hashType.New()
-
-	h.Write(signed)
-	digest := h.Sum(nil)
+	var h hash.Hash
+	var digest []byte
+	if hashType == SM3 {
+		h = sm3.New()
+		h.Write(signed)
+		digest = h.Sum(nil)
+	} else {
+		h = hashType.New()
+		h.Write(signed)
+		digest = h.Sum(nil)
+	}
 
 	switch pub := publicKey.(type) {
 	case *rsa.PublicKey:
@@ -1749,17 +1784,26 @@ func CheckSignature(csr *x509.CertificateRequest, algo x509.SignatureAlgorithm, 
 		hashType = crypto.SHA384
 	case x509.SHA512WithRSA, x509.ECDSAWithSHA512:
 		hashType = crypto.SHA512
+	case SM3WithSM2:
+		hashType = SM3
 	default:
 		return x509.ErrUnsupportedAlgorithm
 	}
 
-	if !hashType.Available() {
+	if hashType != SM3 && !hashType.Available() {
 		return x509.ErrUnsupportedAlgorithm
 	}
-	h := hashType.New()
-
-	h.Write(signed)
-	digest := h.Sum(nil)
+	var h hash.Hash
+	var digest []byte
+	if hashType == SM3 {
+		h = sm3.New()
+		h.Write(signed)
+		digest = h.Sum(nil)
+	} else {
+		h = hashType.New()
+		h.Write(signed)
+		digest = h.Sum(nil)
+	}
 
 	switch pub := csr.PublicKey.(type) {
 	case *rsa.PublicKey:
@@ -1821,7 +1865,7 @@ func SignerAlgo(priv crypto.Signer) x509.SignatureAlgorithm {
 			return x509.ECDSAWithSHA1
 		}
 	case *sm2.PublicKey:
-		return SHA256WithSM2
+		return SM3WithSM2
 	default:
 		return x509.UnknownSignatureAlgorithm
 	}
@@ -1854,7 +1898,7 @@ func DefaultSigAlgo(priv crypto.Signer) x509.SignatureAlgorithm {
 			return x509.ECDSAWithSHA1
 		}
 	case *sm2.PublicKey:
-		return SHA256WithSM2
+		return SM3WithSM2
 	default:
 		//return x509.UnknownSignatureAlgorithm
 		return x509.UnknownSignatureAlgorithm

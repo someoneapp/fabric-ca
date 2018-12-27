@@ -10,7 +10,7 @@ package mysql
 
 import (
 	"bytes"
-	"crypto/tls"
+	//"crypto/tls"
 	"database/sql/driver"
 	"encoding/binary"
 	"errors"
@@ -18,6 +18,7 @@ import (
 	"io"
 	"math"
 	"time"
+	csptls "github.com/hyperledger/fabric/bccsp/tls"
 )
 
 // Packets documentation:
@@ -291,7 +292,7 @@ func (mc *mysqlConn) writeAuthPacket(cipher []byte) error {
 		}
 
 		// Switch to TLS
-		tlsConn := tls.Client(mc.netConn, mc.cfg.tls)
+		tlsConn := csptls.Client(mc.netConn, mc.cfg.tls)
 		if err := tlsConn.Handshake(); err != nil {
 			return err
 		}
